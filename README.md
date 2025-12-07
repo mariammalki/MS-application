@@ -56,7 +56,8 @@ Ce projet illustre une **architecture microservices pour une librairie en ligne*
 │  │        ClusterIP              │                       │
 │  └──────────────────────────────┘                       │
 └─────────────────────────────────────────────────────────┘
-----
+
+
 ## Structure du projet
 microservices-bookstore/
 ├── frontend/
@@ -198,4 +199,5 @@ curl -X POST http://<node-ip>:30080/api/orders \
 
 4. Vérifier le stock
 curl http://<node-ip>:30080/api/books/1
+
 
