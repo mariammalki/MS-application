@@ -23,9 +23,9 @@ kind: Service
 metadata:
   name: frontend
 spec:
-  type: LoadBalancer
-  selector:
-    app: bookstore-frontend
+  type: NodePort
   ports:
     - port: 80
       targetPort: 80
+      nodePort: 30080   
+
