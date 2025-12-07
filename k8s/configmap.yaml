@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bookstore-config
+data:
+  DB_HOST: "bookstore-db"
+  DB_PORT: "5432"
+  DB_NAME: "bookstore_db"
+  DB_USER: "bookstore_user"

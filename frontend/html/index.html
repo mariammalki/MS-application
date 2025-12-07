@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Online Bookstore</title>
+<style>
+    body { font-family: Arial; background: #f4f4f4; margin: 0; }
+    header { background: #4CAF50; color: white; text-align: center; padding: 20px; }
+    .container { width: 80%; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; }
+    h2 { color: #333; }
+    ul { list-style: none; padding: 0; }
+    li { background: #eee; margin: 10px 0; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    li div { flex-grow: 1; }
+    form { margin-top: 20px; }
+    input, select, button { padding: 8px; margin: 5px; }
+    .status { margin-top: 10px; background: #fafafa; padding: 10px; border: 1px solid #ccc; }
+    button { cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+    <h1>Welcome to Online Bookstore</h1>
+    <p>Browse books, add new ones and place orders!</p>
+</header>
+<div class="container">
+
+    <!-- Liste des livres -->
+    <h2>Available Books</h2>
+    <ul id="book-list"></ul>
+
+    <!-- Formulaire de commande -->
+    <h2>Place an Order</h2>
+    <form id="order-form">
+        <input type="text" id="name" placeholder="Your Name" required>
+        <input type="email" id="email" placeholder="Your Email" required>
+        <select id="book-id" required>
+            <option value="">Select a Book</option>
+        </select>
+        <input type="number" id="quantity" placeholder="Quantity" min="1" required>
+        <button type="submit">Order</button>
+    </form>
+    <div id="order-result" class="status"></div>
+
+    <!-- Formulaire ajout livre -->
+    <h2>Add a Book</h2>
+    <form id="add-book-form">
+        <input type="text" id="book-title" placeholder="Title" required>
+        <input type="text" id="book-author" placeholder="Author" required>
+        <input type="number" id="book-price" placeholder="Price" min="0" required>
+        <input type="number" id="book-stock" placeholder="Stock" min="0" required>
+        <button type="submit">Add Book</button>
+    </form>
+    <div id="book-result" class="status"></div>
+</div>
+
+<script>
+    // Charger tous les livres depuis le backend
+    function loadBooks() {
+        fetch('http://localhost:5000/api/books')
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('book-list');
+                const select = document.getElementById('book-id');
+                list.innerHTML = '';
+                select.innerHTML = '<option value="">Select a Book</option>';
+
+                data.forEach(book => {
+                    // Dropdown
+                    const option = document.createElement('option');
+                    option.value = book.id;
+                    option.textContent = `${book.title} ($${book.price})`;
+                    select.appendChild(option);
+
+                    // Liste
+                    const li = document.createElement('li');
+                    const info = document.createElement('div');
+                    info.textContent = `${book.id}. ${book.title} by ${book.author} - $${book.price} (Stock: ${book.stock})`;
+                    li.appendChild(info);
+
+                    // Bouton Update
+                    const updateBtn = document.createElement('button');
+                    updateBtn.textContent = 'Update';
+                    updateBtn.onclick = () => {
+                        const newTitle = prompt('New Title:', book.title);
+                        const newAuthor = prompt('New Author:', book.author);
+                        const newPrice = prompt('New Price:', book.price);
+                        const newStock = prompt('New Stock:', book.stock);
+                        if (newTitle && newAuthor && newPrice && newStock) {
+                            fetch(`http://localhost:5000/api/books/${book.id}`, {
+                                method: 'PUT',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    title: newTitle,
+                                    author: newAuthor,
+                                    price: parseFloat(newPrice),
+                                    stock: parseInt(newStock)
+                                })
+                            }).then(() => loadBooks());
+                        }
+                    };
+
+                    // Bouton Delete
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onclick = () => {
+                        if (confirm(`Delete "${book.title}"?`)) {
+                            fetch(`http://localhost:5000/api/books/${book.id}`, { method: 'DELETE' })
+                                .then(() => loadBooks());
+                        }
+                    };
+
+                    li.appendChild(updateBtn);
+                    li.appendChild(deleteBtn);
+                    list.appendChild(li);
+                });
+            })
+            .catch(err => console.error('Error fetching books:', err));
+    }
+
+    window.addEventListener('load', loadBooks);
+
+    // Ajouter un livre
+    document.getElementById('add-book-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const book = {
+            title: document.getElementById('book-title').value.trim(),
+            author: document.getElementById('book-author').value.trim(),
+            price: parseFloat(document.getElementById('book-price').value),
+            stock: parseInt(document.getElementById('book-stock').value)
+        };
+
+        fetch('http://localhost:5000/api/books', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(book)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('book-result').textContent = `Error: ${data.error}`;
+            } else {
+                document.getElementById('book-result').textContent = `Book Added! ID: ${data.id}`;
+                loadBooks();  // Recharge la liste des livres
+                document.getElementById('add-book-form').reset();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('book-result').textContent = "Failed to add book. Check backend.";
+        });
+    });
+
+    // Passer une commande
+    document.getElementById('order-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const order = {
+            customer_name: document.getElementById('name').value.trim(),
+            customer_email: document.getElementById('email').value.trim(),
+            book_id: parseInt(document.getElementById('book-id').value),
+            quantity: parseInt(document.getElementById('quantity').value)
+        };
+
+        if (isNaN(order.book_id) || order.book_id <= 0) {
+            document.getElementById('order-result').textContent = "Please select a valid book.";
+            return;
+        }
+
+        fetch('http://localhost:5000/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('order-result').textContent = `Order Error: ${data.error}`;
+            } else {
+                document.getElementById('order-result').textContent = `Order Success! Order ID: ${data.order_id}`;
+                loadBooks(); // Met à jour le stock après la commande
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('order-result').textContent = "Error placing order. Check backend.";
+        });
+    });
+</script>
+</body>
+</html>

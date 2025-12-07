@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-service
+  template:
+    metadata:
+      labels:
+        app: book-service
+    spec:
+      containers:
+        - name: book-service
+          image: mariem507/book-service:latest
+          ports:
+            - containerPort: 5001
+          env:
+            - name: DB_HOST
+              value: "bookstore-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "bookstore_db"
+            - name: DB_USER
+              value: "bookstore_user"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secret
+                  key: DB_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-service
+spec:
+  type: ClusterIP
+  selector:
+    app: book-service
+  ports:
+    - port: 5001
+      targetPort: 5001
